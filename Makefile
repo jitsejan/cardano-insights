@@ -1,6 +1,6 @@
 # Cardano Insights - Development Commands
 
-.PHONY: help install test test-fast test-all test-lido test-basic test-cov clean lint format check extract extract-sample extract-full data-status
+.PHONY: help install test test-fast test-all test-lido test-basic test-cov clean lint format check extract-lido extract-lido-full data-status
 
 # Default target
 help:
@@ -11,9 +11,9 @@ help:
 	@echo "  install-dev - Install development dependencies"
 	@echo ""
 	@echo "Data Extraction:"
-	@echo "  extract       - Run sample data extraction (quick test)"
-	@echo "  extract-full  - Run full Catalyst ecosystem extraction"
-	@echo "  data-status   - Show current database status and record counts"
+	@echo "  extract-lido      - Run sample Lido Catalyst extraction (quick test)"
+	@echo "  extract-lido-full - Run full Lido Catalyst ecosystem extraction"
+	@echo "  data-status       - Show current database status and record counts"
 	@echo ""
 	@echo "Testing:"
 	@echo "  test        - Run fast tests (default, skips slow API tests)"
@@ -58,18 +58,24 @@ test-cov:
 	@echo "🚀 Running tests with coverage report..."
 	uv run python -m pytest tests/ --cov=src --cov-report=html --cov-report=term-missing
 
-# Data Extraction
-extract:
-	@echo "🔍 Running sample data extraction (2 pages max)..."
-	uv run python -c "import dlt; from src.cardano_insights.connectors.lido import funds, proposals_enriched; pipeline = dlt.pipeline('sample_pipeline', destination='duckdb', dataset_name='catalyst_sample'); print('Loading funds...'); pipeline.run(funds(), table_name='funds'); print('Loading sample proposals...'); pipeline.run(proposals_enriched(max_pages=2), table_name='proposals_sample')"
-	@echo "✅ Sample extraction completed - check sample_pipeline.duckdb"
+# Data Extraction - Lido Catalyst Explorer API
+extract-lido:
+	@echo "🔍 Running sample Lido Catalyst extraction (2 pages max)..."
+	uv run python -c "import dlt; from src.cardano_insights.connectors.lido import funds, proposals_enriched; pipeline = dlt.pipeline('lido_sample', destination='duckdb', dataset_name='catalyst_lido_sample'); print('Loading funds...'); pipeline.run(funds(), table_name='funds'); print('Loading sample proposals...'); pipeline.run(proposals_enriched(max_pages=2), table_name='proposals_sample')"
+	@echo "✅ Lido sample extraction completed - check lido_sample.duckdb"
 
-extract-full:
-	@echo "🚀 Running FULL Catalyst ecosystem extraction..."
+extract-lido-full:
+	@echo "🚀 Running FULL Lido Catalyst ecosystem extraction..."
 	@echo "⚠️  This will take several minutes and download ~10k proposals"
 	@read -p "Continue? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
-	uv run python -c "import dlt; from src.cardano_insights.connectors.lido import funds, proposals_enriched; pipeline = dlt.pipeline('full_pipeline', destination='duckdb', dataset_name='catalyst_ecosystem'); print('Loading all funds...'); pipeline.run(funds(), table_name='funds'); print('Loading ALL proposals (this will take time)...'); pipeline.run(proposals_enriched(), table_name='proposals_enriched')"
-	@echo "✅ Full extraction completed - check full_pipeline.duckdb"
+	uv run python -c "import dlt; from src.cardano_insights.connectors.lido import funds, proposals_enriched; pipeline = dlt.pipeline('lido_full', destination='duckdb', dataset_name='catalyst_lido_full'); print('Loading all funds...'); pipeline.run(funds(), table_name='funds'); print('Loading ALL proposals (this will take time)...'); pipeline.run(proposals_enriched(), table_name='proposals_enriched')"
+	@echo "✅ Lido full extraction completed - check lido_full.duckdb"
+
+# Data Extraction - Future sources (examples for when we add more)
+# extract-github:
+#	@echo "🔍 Running GitHub repository extraction..."
+# extract-cardanoscan:
+#	@echo "🔍 Running CardanoScan data extraction..."
 
 data-status:
 	@echo "📊 Database Status Report"
@@ -80,17 +86,17 @@ data-status:
 	else \
 		echo "❌ catalyst_complete.duckdb not found"; \
 	fi
-	@if [ -f "sample_pipeline.duckdb" ]; then \
-		echo "📁 sample_pipeline.duckdb (sample dataset):"; \
-		uv run python -c "import duckdb; conn = duckdb.connect('sample_pipeline.duckdb', read_only=True); funds = conn.execute('SELECT COUNT(*) FROM catalyst_sample.funds').fetchone()[0]; proposals = conn.execute('SELECT COUNT(*) FROM catalyst_sample.proposals_sample').fetchone()[0]; print(f'   - Funds: {funds:,}'); print(f'   - Sample Proposals: {proposals:,}'); conn.close()"; \
+	@if [ -f "lido_sample.duckdb" ]; then \
+		echo "📁 lido_sample.duckdb (Lido sample dataset):"; \
+		uv run python -c "import duckdb; conn = duckdb.connect('lido_sample.duckdb', read_only=True); funds = conn.execute('SELECT COUNT(*) FROM catalyst_lido_sample.funds').fetchone()[0]; proposals = conn.execute('SELECT COUNT(*) FROM catalyst_lido_sample.proposals_sample').fetchone()[0]; print(f'   - Funds: {funds:,}'); print(f'   - Sample Proposals: {proposals:,}'); conn.close()"; \
 	else \
-		echo "ℹ️  No sample database (run 'make extract' to create)"; \
+		echo "ℹ️  No Lido sample database (run 'make extract-lido' to create)"; \
 	fi
-	@if [ -f "full_pipeline.duckdb" ]; then \
-		echo "📁 full_pipeline.duckdb (full extraction):"; \
-		uv run python -c "import duckdb; conn = duckdb.connect('full_pipeline.duckdb', read_only=True); funds = conn.execute('SELECT COUNT(*) FROM catalyst_ecosystem.funds').fetchone()[0]; proposals = conn.execute('SELECT COUNT(*) FROM catalyst_ecosystem.proposals_enriched').fetchone()[0]; funded = conn.execute('SELECT COUNT(*) FROM catalyst_ecosystem.proposals_enriched WHERE amount_received > 0').fetchone()[0]; github = conn.execute('SELECT COUNT(*) FROM catalyst_ecosystem.proposals_enriched WHERE has_github = true').fetchone()[0]; print(f'   - Funds: {funds:,}'); print(f'   - Proposals: {proposals:,}'); print(f'   - Funded: {funded:,}'); print(f'   - With GitHub: {github:,}'); conn.close()"; \
+	@if [ -f "lido_full.duckdb" ]; then \
+		echo "📁 lido_full.duckdb (Lido full extraction):"; \
+		uv run python -c "import duckdb; conn = duckdb.connect('lido_full.duckdb', read_only=True); funds = conn.execute('SELECT COUNT(*) FROM catalyst_lido_full.funds').fetchone()[0]; proposals = conn.execute('SELECT COUNT(*) FROM catalyst_lido_full.proposals_enriched').fetchone()[0]; funded = conn.execute('SELECT COUNT(*) FROM catalyst_lido_full.proposals_enriched WHERE amount_received > 0').fetchone()[0]; github = conn.execute('SELECT COUNT(*) FROM catalyst_lido_full.proposals_enriched WHERE has_github = true').fetchone()[0]; print(f'   - Funds: {funds:,}'); print(f'   - Proposals: {proposals:,}'); print(f'   - Funded: {funded:,}'); print(f'   - With GitHub: {github:,}'); conn.close()"; \
 	else \
-		echo "ℹ️  No full extraction database (run 'make extract-full' to create)"; \
+		echo "ℹ️  No Lido full extraction database (run 'make extract-lido-full' to create)"; \
 	fi
 
 # Code Quality (optional - can be added later)
