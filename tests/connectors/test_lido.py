@@ -26,7 +26,8 @@ class TestLidoHelperFunctions:
     def test_extract_github_links(self, text, expected_links):
         """Test GitHub link extraction from text."""
         result = _extract_github_links(text)
-        assert result == expected_links, f"Expected {expected_links}, got {result}"
+        # Sort both lists since set() doesn't guarantee order
+        assert sorted(result) == sorted(expected_links), f"Expected {sorted(expected_links)}, got {sorted(result)}"
 
     @pytest.mark.parametrize("title,problem,solution,experience,expected_categories", [
         ("DeFi Protocol", "Need DeFi tools", "Building DeFi platform", "", ["DeFi"]),
@@ -51,21 +52,18 @@ class TestLidoExtraction:
     """Test suite for Lido connector functionality."""
 
     @pytest.mark.integration
-    @pytest.mark.parametrize("expected_key", [
-        "id",
-        "title", 
-        "amount",
-        "proposals_count"
-    ])
-    def test_funds_structure(self, expected_key):
-        """Test that funds data contains expected keys."""
+    def test_funds_structure_integration(self):
+        """Test that funds data contains expected keys (single API call)."""
         funds_data = list(funds())
         assert len(funds_data) > 0, "No funds data returned"
         
         sample_fund = funds_data[0]
         assert isinstance(sample_fund, dict), "Fund should be a dictionary"
-        # Note: some keys might be None but should exist in structure
-        assert expected_key in sample_fund, f"Fund missing expected key: {expected_key}"
+        
+        # Check all required keys at once to minimize API calls
+        required_keys = ["id", "title", "amount", "proposals_count"]
+        for expected_key in required_keys:
+            assert expected_key in sample_fund, f"Fund missing expected key: {expected_key}"
 
     @pytest.mark.integration
     @pytest.mark.parametrize("max_pages", [1])  # Reduced to 1 page for faster tests
@@ -79,22 +77,17 @@ class TestLidoExtraction:
         # Should get some data
         assert len(proposals_data) >= 10, f"Expected at least 10 proposals, got {len(proposals_data)}"
 
-    @pytest.mark.integration
-    @pytest.mark.parametrize("required_field", [
-        "id",
-        "title",
-        "has_github", 
-        "categories",
-        "primary_category",
-        "github_links"
-    ])
-    def test_proposals_enrichment_fields(self, required_field):
-        """Test that enriched proposals contain all required fields."""
+    @pytest.mark.integration  
+    def test_proposals_enrichment_fields_integration(self):
+        """Test that enriched proposals contain all required fields (single API call)."""
         proposals_data = list(proposals_enriched(max_pages=1))
         assert len(proposals_data) > 0, "No proposals data returned"
         
         sample = proposals_data[0]
-        assert required_field in sample, f"Proposal missing required field: {required_field}"
+        # Check all required fields at once to minimize API calls
+        required_fields = ["id", "title", "has_github", "categories", "primary_category", "github_links"]
+        for required_field in required_fields:
+            assert required_field in sample, f"Proposal missing required field: {required_field}"
 
     @pytest.mark.integration  
     @pytest.mark.parametrize("pipeline_name,dataset_name", [
