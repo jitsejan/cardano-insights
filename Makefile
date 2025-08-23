@@ -16,11 +16,12 @@ help:
 	@echo "  data-status       - Show current database status and record counts"
 	@echo ""
 	@echo "Testing:"
-	@echo "  test        - Run fast tests (default, skips slow API tests)"
-	@echo "  test-all    - Run all tests including slow API tests"
-	@echo "  test-lido   - Run only Lido connector tests"
-	@echo "  test-basic  - Run basic infrastructure tests"
-	@echo "  test-cov    - Run tests with coverage report"
+	@echo "  test           - Run fast unit tests (no API calls, ~0.15s)"
+	@echo "  test-all       - Run all tests including slow API tests"
+	@echo "  test-lido      - Run only Lido connector unit tests (fast)"
+	@echo "  test-integration - Run API integration tests (makes real API calls)"
+	@echo "  test-basic     - Run basic infrastructure tests"
+	@echo "  test-cov       - Run tests with coverage report"
 	@echo ""
 	@echo "Quality:"
 	@echo "  lint        - Run linting checks"
@@ -40,7 +41,7 @@ install-dev:
 # Testing
 test:
 	@echo "🚀 Running fast tests (excluding slow API tests)..."
-	uv run python -m pytest tests/ -v -m "not slow"
+	uv run python -m pytest tests/ -v -m "not slow and not integration"
 
 test-all:
 	@echo "🚀 Running all tests (including slow API tests)..."
@@ -48,7 +49,11 @@ test-all:
 
 test-lido:
 	@echo "🚀 Running Lido connector tests..."
-	uv run python -m pytest tests/connectors/test_lido.py -v
+	uv run python -m pytest tests/connectors/test_lido.py -v -m "not slow and not integration"
+
+test-integration:
+	@echo "🚀 Running integration tests (makes API calls)..."
+	uv run python -m pytest tests/ -v -m "integration"
 
 test-basic:
 	@echo "🚀 Running basic infrastructure tests..."
