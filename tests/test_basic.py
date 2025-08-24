@@ -8,9 +8,9 @@ from src.cardano_insights.connectors import lido
 def test_import_lido_connector():
     """Test that we can import the lido connector."""
     assert hasattr(lido, 'funds')
-    assert hasattr(lido, 'proposals_enriched')
+    assert hasattr(lido, 'proposals_raw')
     assert callable(lido.funds)
-    assert callable(lido.proposals_enriched)
+    assert callable(lido.proposals_raw)
 
 
 def test_sample_fixtures(sample_fund, sample_proposal):

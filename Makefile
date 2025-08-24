@@ -73,14 +73,14 @@ test-cov:
 # Data Extraction - Lido Catalyst Explorer API (Raw for dbt)
 extract-lido:
 	@echo "🔍 Running sample Lido Catalyst extraction (2 pages max)..."
-	uv run python -c "import dlt; from src.cardano_insights.connectors.lido_raw import funds, proposals_raw; pipeline = dlt.pipeline('lido', destination='duckdb', dataset_name='lido'); print('Loading funds...'); pipeline.run(funds(), table_name='funds'); print('Loading sample proposals...'); pipeline.run(proposals_raw(max_pages=2), table_name='proposals_enriched')"
+	uv run python -c "import dlt; from src.cardano_insights.connectors.lido import funds, proposals_raw; pipeline = dlt.pipeline('lido', destination='duckdb', dataset_name='lido'); print('Loading funds...'); pipeline.run(funds(), table_name='funds'); print('Loading sample proposals...'); pipeline.run(proposals_raw(max_pages=2), table_name='proposals_enriched')"
 	@echo "✅ Lido sample extraction completed - check lido.duckdb"
 
 extract-lido-full:
 	@echo "🚀 Running FULL Lido Catalyst ecosystem extraction..."
 	@echo "⚠️  This will take several minutes and download ~10k proposals"
 	@read -p "Continue? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
-	uv run python -c "import dlt; from src.cardano_insights.connectors.lido_raw import funds, proposals_raw; pipeline = dlt.pipeline('lido', destination='duckdb', dataset_name='lido'); print('Loading all funds...'); pipeline.run(funds(), table_name='funds'); print('Loading ALL proposals (this will take time)...'); pipeline.run(proposals_raw(), table_name='proposals_enriched')"
+	uv run python -c "import dlt; from src.cardano_insights.connectors.lido import funds, proposals_raw; pipeline = dlt.pipeline('lido', destination='duckdb', dataset_name='lido'); print('Loading all funds...'); pipeline.run(funds(), table_name='funds'); print('Loading ALL proposals (this will take time)...'); pipeline.run(proposals_raw(), table_name='proposals_enriched')"
 	@echo "✅ Lido full extraction completed - ready for dbt processing"
 
 # Data Extraction - Future sources (examples for when we add more)

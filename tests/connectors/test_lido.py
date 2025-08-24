@@ -8,44 +8,37 @@ import duckdb
 import os
 from pathlib import Path
 
-from src.cardano_insights.connectors.lido import funds, proposals_enriched, _extract_github_links, _categorize_proposal
+from src.cardano_insights.connectors.lido import funds, proposals_raw
 
 
-class TestLidoHelperFunctions:
-    """Fast unit tests for helper functions without API calls."""
+class TestLidoRawConnector:
+    """Fast unit tests for raw connector functions without API calls."""
 
-    @pytest.mark.parametrize("text,expected_links", [
-        ("Check out https://github.com/user/repo", ["https://github.com/user/repo"]),
-        ("Visit https://github.com/user/repo for details", ["https://github.com/user/repo"]),
-        ("Multiple: https://github.com/user1/repo1 and https://github.com/user2/repo2", 
-         ["https://github.com/user1/repo1", "https://github.com/user2/repo2"]),
-        ("No GitHub links here", []),
-        ("Invalid bare github.com link", []),
-        ("", [])
-    ])
-    def test_extract_github_links(self, text, expected_links):
-        """Test GitHub link extraction from text."""
-        result = _extract_github_links(text)
-        # Sort both lists since set() doesn't guarantee order
-        assert sorted(result) == sorted(expected_links), f"Expected {sorted(expected_links)}, got {sorted(result)}"
-
-    @pytest.mark.parametrize("title,problem,solution,experience,expected_categories", [
-        ("DeFi Protocol", "Need DeFi tools", "Building DeFi platform", "", ["DeFi"]),
-        ("NFT Marketplace", "NFT trading", "Creating NFT marketplace", "", ["NFT"]),
-        ("Infrastructure Tool", "Network issues", "Building infrastructure", "", ["Infrastructure"]),
-        ("Developer SDK", "Need dev tools", "Building SDK for developers", "", ["Developer Tools"]),
-        ("Educational Content", "Need education", "Creating educational materials", "", ["Education"]),
-        ("Gaming Platform", "Gaming ecosystem", "Building game platform", "", ["Gaming"]),
-        ("Random Project", "Some problem", "Some solution", "", ["Other"])
-    ])
-    def test_categorize_proposal(self, title, problem, solution, experience, expected_categories):
-        """Test proposal categorization logic."""
-        result = _categorize_proposal(title, problem, solution, experience)
-        assert isinstance(result, list), "Should return a list"
-        assert len(result) > 0, "Should return at least one category"
-        # Check if expected categories are present
-        for expected in expected_categories:
-            assert expected in result, f"Expected category '{expected}' not found in {result}"
+    def test_connector_imports(self):
+        """Test that we can import the raw connector functions."""
+        # Basic smoke test that the functions exist and are callable
+        assert callable(funds), "funds should be callable"
+        assert callable(proposals_raw), "proposals_raw should be callable"
+        
+    @pytest.mark.parametrize("max_pages", [1, 2])
+    def test_proposals_raw_accepts_max_pages(self, max_pages):
+        """Test that proposals_raw function accepts max_pages parameter."""
+        # This tests the function signature without making API calls
+        try:
+            # Just test that we can call the function - iterator won't execute until consumed
+            iterator = proposals_raw(max_pages=max_pages)
+            assert hasattr(iterator, '__iter__'), "Should return an iterator"
+        except Exception as e:
+            pytest.fail(f"proposals_raw(max_pages={max_pages}) should not raise exception: {e}")
+    
+    def test_proposals_raw_accepts_fund_id(self):
+        """Test that proposals_raw function accepts fund_id parameter."""
+        try:
+            # Just test that we can call the function - iterator won't execute until consumed
+            iterator = proposals_raw(fund_id=1)
+            assert hasattr(iterator, '__iter__'), "Should return an iterator"
+        except Exception as e:
+            pytest.fail(f"proposals_raw(fund_id=1) should not raise exception: {e}")
 
 
 class TestLidoExtraction:
@@ -69,7 +62,7 @@ class TestLidoExtraction:
     @pytest.mark.parametrize("max_pages", [1])  # Reduced to 1 page for faster tests
     def test_proposals_extraction_with_limits(self, max_pages):
         """Test proposals extraction with different page limits."""
-        proposals_data = list(proposals_enriched(max_pages=max_pages))
+        proposals_data = list(proposals_raw(max_pages=max_pages))
         
         assert len(proposals_data) > 0, f"No proposals data returned for {max_pages} pages"
         assert isinstance(proposals_data[0], dict), "Proposals should be dictionaries"
@@ -78,14 +71,14 @@ class TestLidoExtraction:
         assert len(proposals_data) >= 10, f"Expected at least 10 proposals, got {len(proposals_data)}"
 
     @pytest.mark.integration  
-    def test_proposals_enrichment_fields_integration(self):
-        """Test that enriched proposals contain all required fields (single API call)."""
-        proposals_data = list(proposals_enriched(max_pages=1))
+    def test_proposals_basic_fields_integration(self):
+        """Test that raw proposals contain basic required fields (single API call)."""
+        proposals_data = list(proposals_raw(max_pages=1))
         assert len(proposals_data) > 0, "No proposals data returned"
         
         sample = proposals_data[0]
-        # Check all required fields at once to minimize API calls
-        required_fields = ["id", "title", "has_github", "categories", "primary_category", "github_links"]
+        # Check basic raw API fields (enrichment fields will be added by dbt)
+        required_fields = ["id", "title", "amount_requested", "fund_id"]
         for required_field in required_fields:
             assert required_field in sample, f"Proposal missing required field: {required_field}"
 
@@ -258,7 +251,7 @@ class TestLidoErrorHandling:
         """Test handling of invalid max_pages values."""
         # This should either raise an error or handle gracefully
         try:
-            proposals_data = list(proposals_enriched(max_pages=invalid_max_pages))
+            proposals_data = list(proposals_raw(max_pages=invalid_max_pages))
             # If it doesn't raise an error, should return empty or handle gracefully
             assert isinstance(proposals_data, list), "Should return a list even for invalid input"
         except (ValueError, TypeError):
@@ -270,7 +263,7 @@ class TestLidoErrorHandling:
     def test_nonexistent_fund_handling(self, fund_id):
         """Test handling of non-existent fund IDs."""
         # These fund IDs shouldn't exist, should return empty results
-        proposals_data = list(proposals_enriched(fund_id=fund_id, max_pages=1))
+        proposals_data = list(proposals_raw(fund_id=fund_id, max_pages=1))
         
         # Should return empty list, not error
         assert isinstance(proposals_data, list), "Should return a list"
