@@ -31,8 +31,8 @@ def funds() -> Iterator[Dict[str, Any]]:
         for f in data.get("data", []):
             yield f
 
-@dlt.resource(name="proposals_raw", write_disposition="merge", primary_key="id")
-def proposals_raw(fund_id: Optional[int] = None, max_pages: Optional[int] = None) -> Iterator[Dict[str, Any]]:
+@dlt.resource(name="proposals", write_disposition="merge", primary_key="id")
+def proposals(fund_id: Optional[int] = None, max_pages: Optional[int] = None) -> Iterator[Dict[str, Any]]:
     """
     Raw proposals from Catalyst API. No enrichment - just raw API data.
     Enrichment will be handled by dbt in the silver layer.
