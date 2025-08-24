@@ -1,0 +1,10 @@
+cardano_insights:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: './cardano_insights.duckdb'
+      threads: 4
+      extensions:
+        - httpfs
+        - parquet

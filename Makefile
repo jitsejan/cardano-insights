@@ -15,6 +15,13 @@ help:
 	@echo "  extract-lido-full - Run full Lido Catalyst ecosystem extraction"
 	@echo "  data-status       - Show current database status and record counts"
 	@echo ""
+	@echo "dbt Analytics:"
+	@echo "  dbt-run          - Run all dbt models (bronze → silver → gold)"
+	@echo "  dbt-test         - Run dbt tests on models"
+	@echo "  dbt-docs         - Generate and serve dbt documentation"
+	@echo "  dbt-clean        - Clean dbt artifacts"
+	@echo "  analytics-full   - Full pipeline: extract-lido-full + dbt-run"
+	@echo ""
 	@echo "Testing:"
 	@echo "  test           - Run fast unit tests (no API calls, ~0.15s)"
 	@echo "  test-all       - Run all tests including slow API tests"
@@ -63,18 +70,18 @@ test-cov:
 	@echo "🚀 Running tests with coverage report..."
 	uv run python -m pytest tests/ --cov=src --cov-report=html --cov-report=term-missing
 
-# Data Extraction - Lido Catalyst Explorer API
+# Data Extraction - Lido Catalyst Explorer API (Raw for dbt)
 extract-lido:
 	@echo "🔍 Running sample Lido Catalyst extraction (2 pages max)..."
-	uv run python -c "import dlt; from src.cardano_insights.connectors.lido import funds, proposals_enriched; pipeline = dlt.pipeline('lido_sample', destination='duckdb', dataset_name='catalyst_lido_sample'); print('Loading funds...'); pipeline.run(funds(), table_name='funds'); print('Loading sample proposals...'); pipeline.run(proposals_enriched(max_pages=2), table_name='proposals_sample')"
-	@echo "✅ Lido sample extraction completed - check lido_sample.duckdb"
+	uv run python -c "import dlt; from src.cardano_insights.connectors.lido_raw import funds, proposals_raw; pipeline = dlt.pipeline('lido', destination='duckdb', dataset_name='lido'); print('Loading funds...'); pipeline.run(funds(), table_name='funds'); print('Loading sample proposals...'); pipeline.run(proposals_raw(max_pages=2), table_name='proposals_enriched')"
+	@echo "✅ Lido sample extraction completed - check lido.duckdb"
 
 extract-lido-full:
 	@echo "🚀 Running FULL Lido Catalyst ecosystem extraction..."
 	@echo "⚠️  This will take several minutes and download ~10k proposals"
 	@read -p "Continue? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
-	uv run python -c "import dlt; from src.cardano_insights.connectors.lido import funds, proposals_enriched; pipeline = dlt.pipeline('lido_full', destination='duckdb', dataset_name='catalyst_lido_full'); print('Loading all funds...'); pipeline.run(funds(), table_name='funds'); print('Loading ALL proposals (this will take time)...'); pipeline.run(proposals_enriched(), table_name='proposals_enriched')"
-	@echo "✅ Lido full extraction completed - check lido_full.duckdb"
+	uv run python -c "import dlt; from src.cardano_insights.connectors.lido_raw import funds, proposals_raw; pipeline = dlt.pipeline('lido', destination='duckdb', dataset_name='lido'); print('Loading all funds...'); pipeline.run(funds(), table_name='funds'); print('Loading ALL proposals (this will take time)...'); pipeline.run(proposals_raw(), table_name='proposals_enriched')"
+	@echo "✅ Lido full extraction completed - ready for dbt processing"
 
 # Data Extraction - Future sources (examples for when we add more)
 # extract-github:
@@ -133,6 +140,31 @@ clean:
 dev-setup: install
 	@echo "🛠️  Development environment ready!"
 	@echo "Run 'make test' to verify everything works"
+
+# dbt Analytics Commands
+dbt-run:
+	@echo "🔄 Running dbt models (bronze → silver → gold)..."
+	uv run dbt run
+
+dbt-test:
+	@echo "🧪 Running dbt tests..."
+	uv run dbt test
+
+dbt-docs:
+	@echo "📖 Generating and serving dbt documentation..."
+	uv run dbt docs generate
+	uv run dbt docs serve --port 8080
+
+dbt-clean:
+	@echo "🧹 Cleaning dbt artifacts..."
+	uv run dbt clean
+
+analytics-full: extract-lido-full dbt-run
+	@echo "🎯 Full analytics pipeline completed!"
+	@echo "📊 Check your database for:"
+	@echo "  - Bronze: stg_funds, stg_proposals"
+	@echo "  - Silver: proposals_enriched"  
+	@echo "  - Gold: funded_projects_summary, wallet_ecosystem_analysis, lace_competitive_landscape"
 
 # CI/CD style checks  
 ci: clean install test-all
