@@ -51,4 +51,4 @@ select
     _dlt_load_id as _loaded_at,
     'lido_api' as _source
 
-from bronze.catalyst_proposals
+from {{ source('lido_raw', 'proposals') }}

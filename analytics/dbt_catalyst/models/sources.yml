@@ -1,11 +1,11 @@
 version: 2
 
 sources:
-  - name: bronze
-    description: "Unified bronze layer with Catalyst and GitHub data"
+  - name: lido_raw
+    description: "Raw Catalyst data from Lido Nation API extraction"
     tables:
-      - name: catalyst_funds
-        description: "Catalyst funding rounds from unified bronze layer"
+      - name: funds
+        description: "Catalyst funding rounds from API"
         columns:
           - name: id
             description: "Unique fund identifier"
@@ -15,8 +15,8 @@ sources:
           - name: title
             description: "Fund title (e.g., 'Fund 13')"
       
-      - name: catalyst_proposals
-        description: "Catalyst proposals from unified bronze layer"
+      - name: proposals
+        description: "Catalyst proposals from API"
         columns:
           - name: id
             description: "Unique proposal identifier" 

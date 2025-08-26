@@ -26,4 +26,4 @@ select
     current_timestamp as _loaded_at,
     'lido_api' as _source
 
-from bronze.catalyst_funds
+from {{ source('lido_raw', 'funds') }}

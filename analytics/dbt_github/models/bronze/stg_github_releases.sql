@@ -8,4 +8,4 @@
 
 SELECT 
     *
-FROM {{ source('bronze', 'github_releases') }}
+FROM {{ source('github_raw', 'releases') }}
