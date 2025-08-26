@@ -1,31 +1,37 @@
-# Cardano Insights - Development Commands
+# Unified Tech Intelligence Platform - Development Commands
 
-.PHONY: help install test test-fast test-all test-lido test-basic test-cov clean lint format check extract-lido extract-lido-full data-status
+.PHONY: help install test test-fast test-all test-lido test-github test-basic test-cov clean lint format check extract-github extract-lido extract-lido-full data-status merge-databases setup-unified
 
 # Default target
 help:
-	@echo "🧪 Cardano Insights - Available Commands"
-	@echo "======================================"
+	@echo "🚀 Unified Tech Intelligence Platform - Available Commands"
+	@echo "=========================================================="
 	@echo "Setup:"
-	@echo "  install     - Install dependencies including test dependencies"
-	@echo "  install-dev - Install development dependencies"
+	@echo "  install        - Install dependencies including test dependencies"
+	@echo "  setup-unified  - Set up unified tech_intel.duckdb with sample data"
 	@echo ""
 	@echo "Data Extraction:"
-	@echo "  extract-lido      - Run sample Lido Catalyst extraction (quick test)"
-	@echo "  extract-lido-full - Run full Lido Catalyst ecosystem extraction"
-	@echo "  data-status       - Show current database status and record counts"
+	@echo "  extract-github     - Run GitHub repository extraction (sample)"
+	@echo "  extract-lido       - Run sample Lido Catalyst extraction"
+	@echo "  extract-lido-full  - Run full Lido Catalyst ecosystem extraction"
+	@echo "  merge-databases    - Merge source DBs into unified tech_intel.duckdb"
+	@echo "  data-status        - Show current database status and record counts"
 	@echo ""
 	@echo "dbt Analytics:"
-	@echo "  dbt-run          - Run all dbt models (bronze → silver → gold)"
-	@echo "  dbt-test         - Run dbt tests on models"
-	@echo "  dbt-docs         - Generate and serve dbt documentation"
-	@echo "  dbt-clean        - Clean dbt artifacts"
-	@echo "  analytics-full   - Full pipeline: extract-lido-full + dbt-run"
+	@echo "  dbt-run-github    - Run GitHub dbt models only"
+	@echo "  dbt-run-catalyst  - Run Catalyst dbt models only"  
+	@echo "  dbt-run-all       - Run all dbt models (GitHub + Catalyst)"
+	@echo "  dbt-test          - Run dbt tests on models"
+	@echo "  dbt-docs-github   - Generate GitHub dbt documentation"
+	@echo "  dbt-docs-catalyst - Generate Catalyst dbt documentation"
+	@echo "  dbt-clean         - Clean dbt artifacts"
+	@echo "  analytics-full    - Full pipeline: extract + merge + dbt-run-all"
 	@echo ""
 	@echo "Testing:"
-	@echo "  test           - Run fast unit tests (no API calls, ~0.15s)"
+	@echo "  test           - Run fast unit tests (GitHub + Lido, ~0.7s)"
 	@echo "  test-all       - Run all tests including slow API tests"
 	@echo "  test-lido      - Run only Lido connector unit tests (fast)"
+	@echo "  test-github    - Run only GitHub connector unit tests (fast)"
 	@echo "  test-integration - Run API integration tests (makes real API calls)"
 	@echo "  test-basic     - Run basic infrastructure tests"
 	@echo "  test-cov       - Run tests with coverage report"
@@ -58,6 +64,10 @@ test-lido:
 	@echo "🚀 Running Lido connector tests..."
 	uv run python -m pytest tests/connectors/test_lido.py -v -m "not slow and not integration"
 
+test-github:
+	@echo "🚀 Running GitHub connector tests..."
+	uv run python -m pytest tests/connectors/test_github.py -v -m "not slow and not integration"
+
 test-integration:
 	@echo "🚀 Running integration tests (makes API calls)..."
 	uv run python -m pytest tests/ -v -m "integration"
@@ -70,45 +80,60 @@ test-cov:
 	@echo "🚀 Running tests with coverage report..."
 	uv run python -m pytest tests/ --cov=src --cov-report=html --cov-report=term-missing
 
-# Data Extraction - Lido Catalyst Explorer API (Raw for dbt)
+# Data Extraction - GitHub API
+extract-github:
+	@echo "🔍 Running GitHub repository extraction..."
+	uv run python -c "import dlt; from src.cardano_insights.connectors.github import repositories, pull_requests, releases; pipeline = dlt.pipeline(pipeline_name='github_data', destination='duckdb', dataset_name='github_raw'); print('Loading repositories...'); pipeline.run(repositories(repos=['cardano-foundation/cardano-wallet', 'input-output-hk/cardano-node']), table_name='repositories'); print('Loading pull requests...'); pipeline.run(pull_requests(repos=['cardano-foundation/cardano-wallet', 'input-output-hk/cardano-node'], max_per_repo=50), table_name='pull_requests'); print('Loading releases...'); pipeline.run(releases(repos=['cardano-foundation/cardano-wallet', 'input-output-hk/cardano-node'], max_per_repo=10), table_name='releases')"
+	@echo "✅ GitHub extraction completed - check github_data.duckdb"
+
+# Data Extraction - Lido Catalyst Explorer API  
 extract-lido:
 	@echo "🔍 Running sample Lido Catalyst extraction (2 pages max)..."
-	uv run python -c "import dlt; from src.cardano_insights.connectors.lido import funds, proposals; pipeline = dlt.pipeline('lido', destination='duckdb', dataset_name='lido'); print('Loading funds...'); pipeline.run(funds(), table_name='funds'); print('Loading sample proposals...'); pipeline.run(proposals(max_pages=2), table_name='proposals_enriched')"
-	@echo "✅ Lido sample extraction completed - check lido.duckdb"
+	uv run python -c "import dlt; from src.cardano_insights.connectors.lido import funds, proposals; pipeline = dlt.pipeline(pipeline_name='cardano_data', destination='duckdb', dataset_name='lido_raw'); print('Loading funds...'); pipeline.run(funds(), table_name='funds'); print('Loading sample proposals...'); pipeline.run(proposals(max_pages=2), table_name='proposals')"
+	@echo "✅ Lido sample extraction completed - check cardano_data.duckdb"
 
 extract-lido-full:
 	@echo "🚀 Running FULL Lido Catalyst ecosystem extraction..."
 	@echo "⚠️  This will take several minutes and download ~10k proposals"
 	@read -p "Continue? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
-	uv run python -c "import dlt; from src.cardano_insights.connectors.lido import funds, proposals; pipeline = dlt.pipeline('lido', destination='duckdb', dataset_name='lido'); print('Loading all funds...'); pipeline.run(funds(), table_name='funds'); print('Loading ALL proposals (this will take time)...'); pipeline.run(proposals(), table_name='proposals_enriched')"
-	@echo "✅ Lido full extraction completed - ready for dbt processing"
+	uv run python -c "import dlt; from src.cardano_insights.connectors.lido import funds, proposals; pipeline = dlt.pipeline(pipeline_name='cardano_data', destination='duckdb', dataset_name='lido_raw'); print('Loading all funds...'); pipeline.run(funds(), table_name='funds'); print('Loading ALL proposals (this will take time)...'); pipeline.run(proposals(), table_name='proposals')"
+	@echo "✅ Lido full extraction completed - check cardano_data.duckdb"
 
-# Data Extraction - Future sources (examples for when we add more)
-# extract-github:
-#	@echo "🔍 Running GitHub repository extraction..."
-# extract-cardanoscan:
-#	@echo "🔍 Running CardanoScan data extraction..."
+# Unified Database Setup
+merge-databases:
+	@echo "🔗 Merging source databases into unified tech_intel.duckdb..."
+	@if [ ! -f "github_data.duckdb" ] || [ ! -f "cardano_data.duckdb" ]; then \
+		echo "❌ Source databases not found. Run 'make extract-github' and 'make extract-lido' first."; \
+		exit 1; \
+	fi
+	duckdb -f scripts/merge_duckdb.sql
+	@echo "✅ Unified database created - ready for dbt analytics"
+
+setup-unified: extract-github extract-lido merge-databases
+	@echo "🎯 Unified tech intelligence platform setup completed!"
+	@echo "📊 You can now run 'make dbt-run-all' for analytics"
 
 data-status:
-	@echo "📊 Database Status Report"
-	@echo "======================="
-	@if [ -f "catalyst_complete.duckdb" ]; then \
-		echo "📁 catalyst_complete.duckdb (existing complete dataset):"; \
-		uv run python -c "import duckdb; conn = duckdb.connect('catalyst_complete.duckdb', read_only=True); funds = conn.execute('SELECT COUNT(*) FROM catalyst_ecosystem.funds').fetchone()[0]; proposals = conn.execute('SELECT COUNT(*) FROM catalyst_ecosystem.proposals_enriched').fetchone()[0]; funded = conn.execute('SELECT COUNT(*) FROM catalyst_ecosystem.proposals_enriched WHERE amount_received > 0').fetchone()[0]; github = conn.execute('SELECT COUNT(*) FROM catalyst_ecosystem.proposals_enriched WHERE has_github = true').fetchone()[0]; print(f'   - Funds: {funds:,}'); print(f'   - Proposals: {proposals:,}'); print(f'   - Funded: {funded:,}'); print(f'   - With GitHub: {github:,}'); conn.close()"; \
+	@echo "📊 Unified Tech Intelligence Database Status"
+	@echo "============================================"
+	@if [ -f "tech_intel.duckdb" ]; then \
+		echo "🎯 tech_intel.duckdb (unified analytics database):"; \
+		uv run python -c "import duckdb; conn = duckdb.connect('tech_intel.duckdb', read_only=True); github_repos = conn.execute('SELECT COUNT(*) FROM bronze.github_repos').fetchone()[0]; github_prs = conn.execute('SELECT COUNT(*) FROM bronze.github_prs').fetchone()[0]; github_releases = conn.execute('SELECT COUNT(*) FROM bronze.github_releases').fetchone()[0]; catalyst_funds = conn.execute('SELECT COUNT(*) FROM bronze.catalyst_funds').fetchone()[0]; catalyst_proposals = conn.execute('SELECT COUNT(*) FROM bronze.catalyst_proposals').fetchone()[0]; print(f'   📊 GitHub Data:'); print(f'     - Repositories: {github_repos:,}'); print(f'     - Pull Requests: {github_prs:,}'); print(f'     - Releases: {github_releases:,}'); print(f'   🏛️  Catalyst Data:'); print(f'     - Funds: {catalyst_funds:,}'); print(f'     - Proposals: {catalyst_proposals:,}'); conn.close()"; \
 	else \
-		echo "❌ catalyst_complete.duckdb not found"; \
+		echo "❌ tech_intel.duckdb not found - run 'make setup-unified' to create"; \
 	fi
-	@if [ -f "lido_sample.duckdb" ]; then \
-		echo "📁 lido_sample.duckdb (Lido sample dataset):"; \
-		uv run python -c "import duckdb; conn = duckdb.connect('lido_sample.duckdb', read_only=True); funds = conn.execute('SELECT COUNT(*) FROM catalyst_lido_sample.funds').fetchone()[0]; proposals = conn.execute('SELECT COUNT(*) FROM catalyst_lido_sample.proposals_sample').fetchone()[0]; print(f'   - Funds: {funds:,}'); print(f'   - Sample Proposals: {proposals:,}'); conn.close()"; \
+	@echo ""
+	@if [ -f "github_data.duckdb" ]; then \
+		echo "📁 github_data.duckdb (GitHub source data):"; \
+		uv run python -c "import duckdb; conn = duckdb.connect('github_data.duckdb', read_only=True); repos = conn.execute('SELECT COUNT(*) FROM github_raw.repositories').fetchone()[0]; prs = conn.execute('SELECT COUNT(*) FROM github_raw.pull_requests').fetchone()[0]; releases = conn.execute('SELECT COUNT(*) FROM github_raw.releases').fetchone()[0]; print(f'   - Repositories: {repos:,}'); print(f'   - Pull Requests: {prs:,}'); print(f'   - Releases: {releases:,}'); conn.close()"; \
 	else \
-		echo "ℹ️  No Lido sample database (run 'make extract-lido' to create)"; \
+		echo "ℹ️  No GitHub database (run 'make extract-github' to create)"; \
 	fi
-	@if [ -f "lido_full.duckdb" ]; then \
-		echo "📁 lido_full.duckdb (Lido full extraction):"; \
-		uv run python -c "import duckdb; conn = duckdb.connect('lido_full.duckdb', read_only=True); funds = conn.execute('SELECT COUNT(*) FROM catalyst_lido_full.funds').fetchone()[0]; proposals = conn.execute('SELECT COUNT(*) FROM catalyst_lido_full.proposals_enriched').fetchone()[0]; funded = conn.execute('SELECT COUNT(*) FROM catalyst_lido_full.proposals_enriched WHERE amount_received > 0').fetchone()[0]; github = conn.execute('SELECT COUNT(*) FROM catalyst_lido_full.proposals_enriched WHERE has_github = true').fetchone()[0]; print(f'   - Funds: {funds:,}'); print(f'   - Proposals: {proposals:,}'); print(f'   - Funded: {funded:,}'); print(f'   - With GitHub: {github:,}'); conn.close()"; \
+	@if [ -f "cardano_data.duckdb" ]; then \
+		echo "📁 cardano_data.duckdb (Cardano/Catalyst source data):"; \
+		uv run python -c "import duckdb; conn = duckdb.connect('cardano_data.duckdb', read_only=True); funds = conn.execute('SELECT COUNT(*) FROM lido_raw.funds').fetchone()[0]; proposals = conn.execute('SELECT COUNT(*) FROM lido_raw.proposals').fetchone()[0]; print(f'   - Funds: {funds:,}'); print(f'   - Proposals: {proposals:,}'); conn.close()"; \
 	else \
-		echo "ℹ️  No Lido full extraction database (run 'make extract-lido-full' to create)"; \
+		echo "ℹ️  No Cardano database (run 'make extract-lido' or 'make extract-lido-full' to create)"; \
 	fi
 
 # Code Quality (optional - can be added later)
@@ -126,15 +151,21 @@ check: lint test
 
 # Cleanup
 clean:
-	@echo "🧹 Cleaning up test artifacts..."
-	find . -name "*.duckdb" -type f -delete
-	find . -name "*.duckdb.wal" -type f -delete
+	@echo "🧹 Cleaning up test artifacts and temporary files..."
+	find . -name "*test*.duckdb" -type f -delete 2>/dev/null || true
+	find . -name "*.duckdb.wal" -type f -delete 2>/dev/null || true
 	find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
-	find . -name "*.pyc" -delete
+	find . -name "*.pyc" -delete 2>/dev/null || true
 	find . -name ".pytest_cache" -type d -exec rm -rf {} + 2>/dev/null || true
 	find . -name "htmlcov" -type d -exec rm -rf {} + 2>/dev/null || true
 	find . -name ".coverage" -delete 2>/dev/null || true
-	@echo "✅ Cleanup completed"
+	@echo "✅ Cleanup completed (essential databases preserved)"
+
+clean-all: clean
+	@echo "🚨 WARNING: This will delete ALL databases including source data!"
+	@read -p "Continue? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
+	find . -name "*.duckdb" -type f -delete
+	@echo "💥 All databases deleted - you'll need to run 'make setup-unified' to recreate"
 
 # Development workflow
 dev-setup: install
@@ -142,29 +173,43 @@ dev-setup: install
 	@echo "Run 'make test' to verify everything works"
 
 # dbt Analytics Commands
-dbt-run:
-	@echo "🔄 Running dbt models (bronze → silver → gold)..."
-	uv run dbt run
+dbt-run-github:
+	@echo "🔄 Running GitHub dbt models (bronze → silver → gold)..."
+	cd analytics/dbt_github && uv run dbt run --profiles-dir ../../ --profile tech_intel
+
+dbt-run-catalyst:
+	@echo "🔄 Running Catalyst dbt models (bronze → silver → gold)..."
+	cd analytics/dbt_catalyst && uv run dbt run --profiles-dir ../../ --profile tech_intel
+
+dbt-run-all: dbt-run-github dbt-run-catalyst
+	@echo "✅ All dbt models completed (GitHub + Catalyst)!"
 
 dbt-test:
 	@echo "🧪 Running dbt tests..."
-	uv run dbt test
+	cd analytics/dbt_github && uv run dbt test --profiles-dir ../../ --profile tech_intel
+	cd analytics/dbt_catalyst && uv run dbt test --profiles-dir ../../ --profile tech_intel
 
-dbt-docs:
-	@echo "📖 Generating and serving dbt documentation..."
-	uv run dbt docs generate
-	uv run dbt docs serve --port 8080
+dbt-docs-github:
+	@echo "📖 Generating GitHub dbt documentation..."
+	cd analytics/dbt_github && uv run dbt docs generate --profiles-dir ../../ --profile tech_intel
+	cd analytics/dbt_github && uv run dbt docs serve --port 8080 --profiles-dir ../../ --profile tech_intel
+
+dbt-docs-catalyst:
+	@echo "📖 Generating Catalyst dbt documentation..."
+	cd analytics/dbt_catalyst && uv run dbt docs generate --profiles-dir ../../ --profile tech_intel
+	cd analytics/dbt_catalyst && uv run dbt docs serve --port 8081 --profiles-dir ../../ --profile tech_intel
 
 dbt-clean:
 	@echo "🧹 Cleaning dbt artifacts..."
-	uv run dbt clean
+	cd analytics/dbt_github && uv run dbt clean --profiles-dir ../../ --profile tech_intel
+	cd analytics/dbt_catalyst && uv run dbt clean --profiles-dir ../../ --profile tech_intel
 
-analytics-full: extract-lido-full dbt-run
+analytics-full: setup-unified dbt-run-all
 	@echo "🎯 Full analytics pipeline completed!"
-	@echo "📊 Check your database for:"
-	@echo "  - Bronze: stg_funds, stg_proposals"
-	@echo "  - Silver: proposals_enriched"  
-	@echo "  - Gold: funded_projects_summary, wallet_ecosystem_analysis, lace_competitive_landscape"
+	@echo "📊 Unified tech intelligence database ready with:"
+	@echo "  🔗 Bronze: Unified source data (GitHub + Catalyst)"
+	@echo "  🥈 Silver: Cleaned and transformed data"
+	@echo "  🥇 Gold: Business-ready analytics and insights"
 
 # CI/CD style checks  
 ci: clean install test-all
