@@ -1,0 +1,44 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: Unified bronze layer with GitHub and Cardano data
+    tables:
+      - name: github_prs
+        description: GitHub pull requests from unified bronze layer
+        columns:
+          - name: id
+            description: GitHub pull request ID
+            tests:
+              - not_null
+              - unique
+          - name: repository_full_name
+            description: Repository name in owner/repo format
+            tests:
+              - not_null
+              
+      - name: github_releases
+        description: GitHub releases from unified bronze layer
+        columns:
+          - name: id
+            description: GitHub release ID
+            tests:
+              - not_null
+              - unique
+          - name: repository_full_name
+            description: Repository name in owner/repo format
+            tests:
+              - not_null
+              
+      - name: github_repos
+        description: GitHub repository metadata from unified bronze layer
+        columns:
+          - name: id
+            description: GitHub repository ID
+            tests:
+              - not_null
+              - unique
+          - name: full_name
+            description: Repository name in owner/repo format
+            tests:
+              - not_null

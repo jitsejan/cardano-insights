@@ -9,6 +9,15 @@ clean-targets: ['target']
 
 models:
   dbt_github:
-    +schema: 'silver'
-    github:
-      +materialized: view
+    bronze:
+      +materialized: table
+      +docs:
+        node_color: "#8B4513"
+    silver:
+      +materialized: table
+      +docs:
+        node_color: "#C0C0C0"
+    gold:
+      +materialized: table
+      +docs:
+        node_color: "#FFD700"
