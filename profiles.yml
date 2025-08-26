@@ -1,10 +1,7 @@
-cardano_insights:
+tech_intel:
   target: dev
   outputs:
     dev:
       type: duckdb
-      path: './cardano_insights.duckdb'
-      threads: 4
-      extensions:
-        - httpfs
-        - parquet
+      path: './tech_intel.duckdb'
+      threads: 8

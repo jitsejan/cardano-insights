@@ -1,0 +1,7 @@
+tech_intel:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: ./tech_intel.duckdb
+      threads: 8

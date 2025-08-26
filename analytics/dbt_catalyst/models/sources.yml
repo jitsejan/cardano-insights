@@ -1,0 +1,33 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: "Unified bronze layer with Catalyst and GitHub data"
+    tables:
+      - name: catalyst_funds
+        description: "Catalyst funding rounds from unified bronze layer"
+        columns:
+          - name: id
+            description: "Unique fund identifier"
+            tests:
+              - unique
+              - not_null
+          - name: title
+            description: "Fund title (e.g., 'Fund 13')"
+      
+      - name: catalyst_proposals
+        description: "Catalyst proposals from unified bronze layer"
+        columns:
+          - name: id
+            description: "Unique proposal identifier" 
+            tests:
+              - unique
+              - not_null
+          - name: fund_id
+            description: "Foreign key to funds table"
+            tests:
+              - not_null
+          - name: title
+            description: "Proposal title"
+            tests:
+              - not_null
