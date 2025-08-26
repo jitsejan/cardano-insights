@@ -1,24 +1,30 @@
 version: 2
 
 models:
-  - name: stg_catalyst_proposal
+  # Bronze layer
+  - name: stg_funds
+    description: "Staging layer for Catalyst funds"
+    
+  - name: stg_proposals
+    description: "Staging layer for Catalyst proposals"
+    
+  # Silver layer
+  - name: proposals_enriched
+    description: "Enriched proposals with wallet detection and funding analysis"
     columns:
-      - name: project_id
-        tests: [not_null]
-      - name: title
-        tests: [not_null]
-
-  - name: map_project_repo
-    columns:
-      - name: project_id
-        tests: [not_null]
-      - name: repo_key
-        tests: [not_null]
+      - name: is_wallet_related
+        description: "Boolean indicating if project is wallet ecosystem related"
+      - name: potential_lace_competitor
+        description: "Boolean indicating if project competes with Lace wallet"
+      - name: funding_category
+        description: "Categorized funding status (funded, approved, in_progress, not_funded)"
         
-  - name: project_delivery_panel
-    description: "Unified view combining Catalyst project data with GitHub activity metrics"
-    columns:
-      - name: project_id
-        tests: [not_null]
-      - name: title
-        tests: [not_null]
+  # Gold layer
+  - name: funded_projects_summary
+    description: "Summary analytics of funded projects by fund"
+    
+  - name: wallet_ecosystem_analysis
+    description: "Detailed analysis of wallet ecosystem projects"
+    
+  - name: lace_competitive_landscape
+    description: "Strategic analysis of Lace wallet competitive landscape"

@@ -9,7 +9,7 @@ with manual as (
 auto as (
   -- Extract GitHub links from proposal data and convert to repo_key format
   select 
-    cast(project_id as varchar) as project_id,
+    cast(id as varchar) as project_id,
     lower(
       case 
         when website like '%github.com%' then 
@@ -22,8 +22,8 @@ auto as (
     ) as repo_key,
     'discovered' as source,
     _loaded_at as mapped_at
-  from {{ ref('stg_catalyst_proposal') }}
-  where has_github = true 
+  from {{ ref('stg_proposals') }}
+  where (website like '%github.com%' or link like '%github.com%' or ideascale_link like '%github.com%') 
 )
 select * from manual
 union all

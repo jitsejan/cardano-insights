@@ -24,13 +24,12 @@ github_activity as (
 ),
 project_info as (
   select 
-    cast(project_id as varchar) as project_id,
+    cast(id as varchar) as project_id,
     title,
     amount_requested,
     funding_status,
-    categories,
-    has_github
-  from {{ ref('stg_catalyst_proposal') }}
+    case when (website like '%github.com%' or link like '%github.com%' or ideascale_link like '%github.com%') then true else false end as has_github
+  from {{ ref('stg_proposals') }}
 )
 select 
   p.*,

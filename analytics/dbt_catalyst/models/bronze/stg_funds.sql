@@ -8,7 +8,7 @@
 select
     id,
     title,
-    fund as fund_number,
+    id as fund_number,
     proposals_count,
     amount as funding_available,
     currency,
@@ -18,7 +18,7 @@ select
     thumbnail_url,
     slug,
     content as description,
-    excerpt,
+    content as excerpt,
     label,
     funded_proposals,
     
@@ -26,4 +26,4 @@ select
     current_timestamp as _loaded_at,
     'lido_api' as _source
 
-from {{ source('lido', 'funds') }}
+from bronze.catalyst_funds
