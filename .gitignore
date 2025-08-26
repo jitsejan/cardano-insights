@@ -30,9 +30,12 @@ ENV/
 env.bak/
 venv.bak/
 
-# DuckDB databases
+# DuckDB databases (keep source databases, ignore temporary/test ones)
 *.duckdb
 *.duckdb.wal
+!tech_intel.duckdb
+!github_data.duckdb
+!cardano_data.duckdb
 
 # dlt
 .dlt/
