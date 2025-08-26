@@ -1,0 +1,14 @@
+name: 'dbt_github'
+version: '1.0.0'
+profile: 'tech_intel'
+config-version: 2
+
+model-paths: ['models']
+target-path: 'target'
+clean-targets: ['target']
+
+models:
+  dbt_github:
+    +schema: 'silver'
+    github:
+      +materialized: view

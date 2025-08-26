@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: stg_catalyst_proposal
+    columns:
+      - name: project_id
+        tests: [not_null]
+      - name: title
+        tests: [not_null]
+
+  - name: map_project_repo
+    columns:
+      - name: project_id
+        tests: [not_null]
+      - name: repo_key
+        tests: [not_null]
+        
+  - name: project_delivery_panel
+    description: "Unified view combining Catalyst project data with GitHub activity metrics"
+    columns:
+      - name: project_id
+        tests: [not_null]
+      - name: title
+        tests: [not_null]

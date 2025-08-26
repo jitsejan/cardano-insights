@@ -1,0 +1,6 @@
+packages:
+  - local: ../dbt_shared
+    name: dbt_shared
+  - local: ../dbt_github
+    name: dbt_github
+sha1_hash: 026bc7b0de4d23723516c40b908a7bfe04ab539b

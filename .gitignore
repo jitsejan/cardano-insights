@@ -37,6 +37,11 @@ venv.bak/
 # dlt
 .dlt/
 
+# dbt
+target/
+dbt_packages/
+logs/
+
 # Export directories
 bronze_export/
 silver_export/
