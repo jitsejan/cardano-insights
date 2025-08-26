@@ -129,65 +129,45 @@ class TestLidoEnrichment:
     """Test suite for Lido data enrichment features."""
 
     @pytest.mark.integration
-    @pytest.mark.parametrize("github_field", [
-        "github_links",
-        "has_github"
+    @pytest.mark.parametrize("raw_field", [
+        "id",
+        "title", 
+        "solution",
+        "problem",
+        "embedded_uris"
     ])
-    def test_github_fields_present(self, github_field):
-        """Test that all GitHub-related fields are present in proposals."""
-        proposals_data = list(proposals_enriched(max_pages=1))
+    def test_raw_fields_present(self, raw_field):
+        """Test that essential raw fields are present in proposals."""
+        proposals_data = list(proposals(max_pages=1))
         assert len(proposals_data) > 0, "No proposals data returned"
         
         sample = proposals_data[0]
-        assert github_field in sample, f"Missing {github_field} field"
+        assert raw_field in sample, f"Missing {raw_field} field"
 
     @pytest.mark.integration
-    @pytest.mark.parametrize("proposal_index", [0, 1, 2])  # Reduced for faster tests
-    def test_category_fields_structure(self, proposal_index):
-        """Test category structure across multiple proposals."""
-        proposals_data = list(proposals_enriched(max_pages=1))
+    def test_embedded_uris_structure(self):
+        """Test that embedded_uris field contains GitHub links when present."""
+        proposals_data = list(proposals(max_pages=1))
+        assert len(proposals_data) > 0, "No proposals data returned"
         
-        # Skip if not enough proposals
-        if len(proposals_data) <= proposal_index:
-            pytest.skip(f"Not enough proposals for index {proposal_index}")
-        
-        proposal = proposals_data[proposal_index]
-        
-        # Check category enrichment structure
-        assert 'categories' in proposal, f"Missing categories field in proposal {proposal_index}"
-        assert 'primary_category' in proposal, f"Missing primary_category field in proposal {proposal_index}"
-        
-        categories = proposal['categories']
-        primary_category = proposal['primary_category']
-        
-        assert isinstance(categories, list), f"categories should be a list in proposal {proposal_index}"
-        assert len(categories) > 0, f"categories should not be empty in proposal {proposal_index}"
-        assert isinstance(primary_category, str), f"primary_category should be a string in proposal {proposal_index}"
-        assert primary_category in categories, f"primary_category should be in categories list in proposal {proposal_index}"
-
-    @pytest.mark.integration
-    @pytest.mark.parametrize("expected_category", [
-        "DeFi", "Infrastructure", "Developer Tools"  # Reduced for faster tests
-    ])
-    def test_known_categories_can_be_assigned(self, expected_category):
-        """Test that known categories can be properly assigned."""
-        # This is more of a smoke test - we get proposals and check if any have these categories
-        proposals_data = list(proposals_enriched(max_pages=2))
-        
-        # Check if any proposals have this category
-        proposals_with_category = [
-            p for p in proposals_data 
-            if expected_category in p.get('categories', [])
+        # Look for proposals with embedded_uris that contain GitHub links
+        github_proposals = [
+            p for p in proposals_data
+            if 'embedded_uris' in p and p['embedded_uris'] and
+            any('github.com' in str(uri) for uri_list in p['embedded_uris'] for uri in uri_list)
         ]
         
-        # We don't assert that ALL categories exist (as it depends on data)
-        # But we verify the structure is correct if they do exist
-        if proposals_with_category:
-            sample = proposals_with_category[0]
-            assert expected_category in sample['categories']
-            # If it's in categories, could be primary too
-            if sample['primary_category'] == expected_category:
-                assert sample['primary_category'] in sample['categories']
+        if github_proposals:
+            sample = github_proposals[0]
+            assert 'embedded_uris' in sample
+            assert isinstance(sample['embedded_uris'], list)
+            # Verify it contains at least one GitHub URI
+            has_github_uri = any(
+                'github.com' in str(uri) 
+                for uri_list in sample['embedded_uris'] 
+                for uri in uri_list
+            )
+            assert has_github_uri, "Expected GitHub URI in embedded_uris"
 
 
 class TestLidoIntegration:
@@ -213,7 +193,7 @@ class TestLidoIntegration:
     ])
     def test_pagination_scaling(self, max_pages, min_expected):
         """Test that pagination scales properly with different page limits."""
-        proposals_data = list(proposals_enriched(max_pages=max_pages))
+        proposals_data = list(proposals(max_pages=max_pages))
         
         assert len(proposals_data) >= min_expected, f"Expected at least {min_expected} proposals for {max_pages} pages, got {len(proposals_data)}"
         
@@ -228,10 +208,10 @@ class TestLidoIntegration:
         """Test fund filtering functionality."""
         if fund_id is None:
             # Test without filter
-            proposals_data = list(proposals_enriched(max_pages=1))
+            proposals_data = list(proposals(max_pages=1))
         else:
             # Test with specific fund filter
-            proposals_data = list(proposals_enriched(fund_id=fund_id, max_pages=1))
+            proposals_data = list(proposals(fund_id=fund_id, max_pages=1))
         
         assert len(proposals_data) >= 0, "Should return valid data (could be empty for specific funds)"
         
