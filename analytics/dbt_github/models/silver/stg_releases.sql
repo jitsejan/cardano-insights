@@ -12,7 +12,7 @@ WITH releases_cleaned AS (
         id,
         name as release_name,
         tag_name as tag,
-        author.login as release_author,
+        author__login as release_author,
         published_at,
         created_at,
         updated_at,

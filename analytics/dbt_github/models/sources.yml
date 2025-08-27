@@ -1,11 +1,12 @@
 version: 2
 
 sources:
-  - name: bronze
-    description: Unified bronze layer with GitHub and Cardano data
+  - name: github_raw
+    description: Raw GitHub data from API extraction  
+    schema: github_raw
     tables:
-      - name: github_prs
-        description: GitHub pull requests from unified bronze layer
+      - name: pull_requests
+        description: GitHub pull requests from API
         columns:
           - name: id
             description: GitHub pull request ID
@@ -17,8 +18,8 @@ sources:
             tests:
               - not_null
               
-      - name: github_releases
-        description: GitHub releases from unified bronze layer
+      - name: releases
+        description: GitHub releases from API
         columns:
           - name: id
             description: GitHub release ID
@@ -30,8 +31,8 @@ sources:
             tests:
               - not_null
               
-      - name: github_repos
-        description: GitHub repository metadata from unified bronze layer
+      - name: repositories
+        description: GitHub repository metadata from API
         columns:
           - name: id
             description: GitHub repository ID

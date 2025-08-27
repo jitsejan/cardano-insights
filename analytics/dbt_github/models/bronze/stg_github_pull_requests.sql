@@ -8,4 +8,4 @@
 
 SELECT 
     *
-FROM {{ source('bronze', 'github_prs') }}
+FROM {{ source('github_raw', 'pull_requests') }}
