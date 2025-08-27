@@ -144,7 +144,7 @@ dev-setup: install
 # dbt Analytics Commands
 dbt-run-github:
 	@echo "🔄 Running GitHub dbt models (bronze → silver → gold)..."
-	cd analytics/dbt_github && uv run dbt run --profiles-dir ../../ --profile tech_intel
+	uv run dbt run --project-dir analytics/dbt_github --profiles-dir . --profile tech_intel
 
 dbt-run-catalyst:
 	@echo "🔄 Running Catalyst dbt models (bronze → silver → gold)..."
@@ -155,8 +155,8 @@ dbt-run-all: dbt-run-github dbt-run-catalyst
 
 dbt-test:
 	@echo "🧪 Running dbt tests..."
-	cd analytics/dbt_github && uv run dbt test --profiles-dir ../../ --profile tech_intel
-	cd analytics/dbt_catalyst && uv run dbt test --profiles-dir ../../ --profile tech_intel
+	uv run dbt test --project-dir analytics/dbt_github --profiles-dir . --profile tech_intel
+	uv run dbt test --project-dir analytics/dbt_catalyst --profiles-dir . --profile tech_intel
 
 dbt-docs-github:
 	@echo "📖 Generating GitHub dbt documentation..."

@@ -2,7 +2,8 @@ version: 2
 
 sources:
   - name: github_raw
-    description: Raw GitHub data from API extraction
+    description: Raw GitHub data from API extraction  
+    schema: github_raw
     tables:
       - name: pull_requests
         description: GitHub pull requests from API

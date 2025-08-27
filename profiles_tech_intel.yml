@@ -3,6 +3,5 @@ tech_intel:
   outputs:
     dev:
       type: duckdb
-      path: ../../tech_intel.duckdb
-      schema: main
+      path: tech_intel.duckdb
       threads: 8

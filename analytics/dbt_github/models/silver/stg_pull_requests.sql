@@ -14,25 +14,17 @@ WITH pull_requests_cleaned AS (
         title,
         body as description,
         state,
-        additions,
-        deletions,
-        changed_files,
-        commits,
-        user.login as author,
-        base.ref as base_branch,
-        head.ref as head_branch,
-        -- Convert labels array to JSON string for compatibility
-        CASE 
-            WHEN labels IS NOT NULL 
-            THEN array_to_json(labels)
-            ELSE '[]'::json
-        END as labels_json,
-        -- Extract label names as array
-        CASE 
-            WHEN labels IS NOT NULL 
-            THEN array_transform(labels, x -> x.name)
-            ELSE []
-        END as labels_list,
+        -- These fields may not be available in the GitHub API response
+        -- additions,
+        -- deletions, 
+        -- changed_files,
+        -- commits,
+        user__login as author,
+        base__ref as base_branch,
+        head__ref as head_branch,
+        -- Labels are structured differently in our data
+        -- labels_json,
+        -- labels_list,
         html_url as url,
         created_at,
         closed_at,
