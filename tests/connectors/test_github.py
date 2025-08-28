@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from src.cardano_insights.connectors.github import _get_json, repositories, pull_requests, releases, issues
+from src.cardano_insights.connectors.github import _get_json, repositories, pull_requests, releases, issues, _check_data_freshness, _get_last_updated_timestamp
 
 
 class TestGitHubConnector:
@@ -114,18 +114,20 @@ class TestGitHubExtraction:
         "cardano-foundation/cardano-wallet",
         "input-output-hk/cardano-node"
     ])
-    def test_repositories_generator(self, repo_name):
-        """Test repositories generator function."""
+    def test_repositories_generator_with_force_refresh(self, repo_name):
+        """Test repositories generator function with force refresh."""
         mock_data = {"id": 1, "name": "test-repo", "full_name": repo_name}
         
         with patch('src.cardano_insights.connectors.github._get_json') as mock_get_json:
             mock_get_json.return_value = mock_data
             
             repos_list = [repo_name]
-            result = list(repositories(repos=repos_list))
+            # Test with force_refresh=True to bypass freshness checks
+            result = list(repositories(repos=repos_list, force_refresh=True))
             
             assert len(result) == 1
-            assert result[0] == mock_data
+            assert result[0]["id"] == mock_data["id"]
+            assert "fetched_at" in result[0]  # Should add fetched_at timestamp
             mock_get_json.assert_called_once_with(f"repos/{repo_name}")
     
     @pytest.mark.parametrize("max_per_repo", [1, 5, 10])
@@ -152,7 +154,8 @@ class TestGitHubExtraction:
             mock_get_json.side_effect = [mock_pr_data, []]  # First page has data, second is empty
             
             repos_list = ["test/repo"]
-            result = list(pull_requests(repos=repos_list, max_per_repo=5))
+            # Use force_refresh=True to bypass freshness checks in tests
+            result = list(pull_requests(repos=repos_list, max_per_repo=5, force_refresh=True))
             
             assert len(result) == 2
             assert all("repository_full_name" in pr for pr in result)
@@ -171,7 +174,11 @@ class TestGitHubExtraction:
         with patch('src.cardano_insights.connectors.github._get_json') as mock_get_json:
             mock_get_json.side_effect = [mock_data, []]
             
-            result = list(resource_func(repos=["test/repo"], max_per_repo=1))
+            # Add force_refresh for resources that support it
+            if resource_name in ["pull_requests", "releases"]:
+                result = list(resource_func(repos=["test/repo"], max_per_repo=1, force_refresh=True))
+            else:
+                result = list(resource_func(repos=["test/repo"], max_per_repo=1))
             
             assert len(result) == 1
             assert "repository_full_name" in result[0]
@@ -199,8 +206,8 @@ class TestGitHubPipeline:
                 dataset_name=dataset_name
             )
             
-            # Load repositories
-            repo_info = pipeline.run(repositories(repos=["test/repo"]), table_name="repositories")
+            # Load repositories with force refresh to avoid freshness checks in tests
+            repo_info = pipeline.run(repositories(repos=["test/repo"], force_refresh=True), table_name="repositories")
             assert repo_info is not None, f"Repository loading failed for {pipeline_name}"
             
             # Verify data in database
@@ -263,6 +270,139 @@ class TestGitHubFeatureClassification:
             classification = 'not clear'
         
         assert classification == expected_classification
+
+
+class TestGitHubIncrementalLoading:
+    """Test suite for incremental loading functionality."""
+    
+    def test_check_data_freshness_no_database(self):
+        """Test freshness check when database doesn't exist."""
+        with patch('src.cardano_insights.connectors.github._get_database_path') as mock_path:
+            mock_path.return_value = "nonexistent.duckdb"
+            
+            is_fresh, last_updated = _check_data_freshness("repositories", "test/repo")
+            
+            assert is_fresh is False
+            assert last_updated is None
+    
+    def test_check_data_freshness_fresh_data(self):
+        """Test freshness check with fresh data."""
+        from datetime import datetime, timedelta
+        fresh_timestamp = datetime.now() - timedelta(days=1)  # 1 day old = fresh
+        
+        with patch('src.cardano_insights.connectors.github.duckdb.connect') as mock_connect:
+            mock_conn = Mock()
+            mock_connect.return_value = mock_conn
+            mock_conn.execute.return_value.fetchone.return_value = [fresh_timestamp.isoformat()]
+            
+            with patch('src.cardano_insights.connectors.github.Path.exists', return_value=True):
+                is_fresh, last_updated = _check_data_freshness("repositories", "test/repo")
+                
+                assert is_fresh is True
+                assert last_updated is not None
+    
+    def test_check_data_freshness_stale_data(self):
+        """Test freshness check with stale data."""
+        from datetime import datetime, timedelta
+        stale_timestamp = datetime.now() - timedelta(days=10)  # 10 days old = stale
+        
+        with patch('src.cardano_insights.connectors.github.duckdb.connect') as mock_connect:
+            mock_conn = Mock()
+            mock_connect.return_value = mock_conn
+            mock_conn.execute.return_value.fetchone.return_value = [stale_timestamp.isoformat()]
+            
+            with patch('src.cardano_insights.connectors.github.Path.exists', return_value=True):
+                is_fresh, last_updated = _check_data_freshness("repositories", "test/repo")
+                
+                assert is_fresh is False
+                assert last_updated is not None
+    
+    def test_get_last_updated_timestamp(self):
+        """Test getting last updated timestamp."""
+        test_timestamp = "2023-12-01T10:00:00Z"
+        
+        with patch('src.cardano_insights.connectors.github.duckdb.connect') as mock_connect:
+            mock_conn = Mock()
+            mock_connect.return_value = mock_conn
+            mock_conn.execute.return_value.fetchone.return_value = [test_timestamp]
+            
+            with patch('src.cardano_insights.connectors.github.Path.exists', return_value=True):
+                result = _get_last_updated_timestamp("pull_requests", "test/repo")
+                
+                assert result == test_timestamp
+    
+    def test_repositories_with_force_refresh_true(self):
+        """Test repositories function with force_refresh=True."""
+        mock_data = {"id": 1, "name": "test-repo"}
+        
+        with patch('src.cardano_insights.connectors.github._get_json') as mock_get_json:
+            with patch('src.cardano_insights.connectors.github._check_data_freshness') as mock_freshness:
+                mock_get_json.return_value = mock_data
+                mock_freshness.return_value = (True, None)  # Even if fresh, should be ignored
+                
+                result = list(repositories(repos=["test/repo"], force_refresh=True))
+                
+                assert len(result) == 1
+                assert "fetched_at" in result[0]
+                # _check_data_freshness should NOT be called when force_refresh=True
+                mock_freshness.assert_not_called()
+    
+    def test_repositories_incremental_skips_fresh_data(self):
+        """Test repositories function skips fresh data in incremental mode."""
+        with patch('src.cardano_insights.connectors.github._get_json') as mock_get_json:
+            with patch('src.cardano_insights.connectors.github._check_data_freshness') as mock_freshness:
+                mock_freshness.return_value = (True, "2023-12-01T10:00:00Z")  # Fresh data
+                
+                result = list(repositories(repos=["test/repo"], force_refresh=False))
+                
+                assert len(result) == 0  # Should skip fresh data
+                mock_get_json.assert_not_called()  # API should not be called
+                mock_freshness.assert_called_once()
+    
+    def test_pull_requests_incremental_with_since_parameter(self):
+        """Test pull requests uses 'since' parameter for incremental fetching."""
+        mock_pr_data = [{"id": 1, "updated_at": "2023-12-02T10:00:00Z"}]
+        last_timestamp = "2023-12-01T10:00:00Z"
+        
+        with patch('src.cardano_insights.connectors.github._get_json') as mock_get_json:
+            with patch('src.cardano_insights.connectors.github._check_data_freshness') as mock_freshness:
+                with patch('src.cardano_insights.connectors.github._get_last_updated_timestamp') as mock_timestamp:
+                    mock_get_json.side_effect = [mock_pr_data, []]  # First page has data, second is empty
+                    mock_freshness.return_value = (False, None)  # Stale, needs refresh
+                    mock_timestamp.return_value = last_timestamp
+                    
+                    result = list(pull_requests(repos=["test/repo"], force_refresh=False))
+                    
+                    assert len(result) == 1
+                    # Check that 'since' parameter was used in the API call
+                    calls = mock_get_json.call_args_list
+                    found_since = False
+                    for call in calls:
+                        # call is a tuple (args, kwargs), we want the second positional arg (params)
+                        if len(call[0]) > 1 and isinstance(call[0][1], dict) and "since" in call[0][1]:
+                            found_since = True
+                            assert call[0][1]["since"] == last_timestamp
+                            break
+                    assert found_since, f"Expected 'since' parameter in API calls: {calls}"
+    
+    def test_releases_stops_on_old_data_incremental(self):
+        """Test releases stops fetching when it reaches old data during incremental update."""
+        last_timestamp = "2023-12-01T10:00:00Z"
+        old_release = {"id": 1, "published_at": "2023-11-30T10:00:00Z"}  # Older than last_timestamp
+        new_release = {"id": 2, "published_at": "2023-12-02T10:00:00Z"}  # Newer than last_timestamp
+        
+        with patch('src.cardano_insights.connectors.github._get_json') as mock_get_json:
+            with patch('src.cardano_insights.connectors.github._check_data_freshness') as mock_freshness:
+                with patch('src.cardano_insights.connectors.github._get_last_updated_timestamp') as mock_timestamp:
+                    # First page: new data, second page: old data (should stop here)
+                    mock_get_json.side_effect = [[new_release], [old_release]]
+                    mock_freshness.return_value = (False, None)
+                    mock_timestamp.return_value = last_timestamp
+                    
+                    result = list(releases(repos=["test/repo"], force_refresh=False))
+                    
+                    assert len(result) == 1  # Should only get the new release
+                    assert result[0]["id"] == 2  # Should be the new release
 
 
 class TestGitHubErrorHandling:
