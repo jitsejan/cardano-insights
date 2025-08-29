@@ -11,8 +11,8 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 import dlt
-from src.cardano_insights.connectors.github import repositories, pull_requests, releases
-from src.cardano_insights.connectors.lido import funds, proposals
+from load.github.pipeline import repositories, pull_requests, releases
+from load.lido.pipeline import funds, proposals
 
 def extract_github_data(sample: bool = True, force_refresh: bool = False):
     """Extract GitHub data to tech_intel.duckdb with incremental loading"""

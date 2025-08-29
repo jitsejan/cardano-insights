@@ -1,0 +1,4 @@
+packages:
+  - local: ../dbt_shared
+    name: cardano_shared
+sha1_hash: f573dcba867e51e0cc2d91a57908985310746d3a
