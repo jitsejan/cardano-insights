@@ -1,0 +1,71 @@
+name: dbt Development Tests
+
+on:
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'transform/**'
+      - 'analytics/**'  # Support legacy path during migration
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  dbt-test:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    
+    strategy:
+      matrix:
+        dbt_project: 
+          - dbt_catalyst
+          # - dbt_github  # Add when GitHub models are migrated to Athena
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dbt
+      run: |
+        pip install dbt-core==1.10.9 dbt-athena-community==1.8.4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Setup dbt profiles
+      working-directory: ./transform
+      env:
+        S3_BUCKET: ${{ secrets.DEV_S3_BUCKET }}
+        GLUE_DATABASE: ${{ secrets.DEV_GLUE_DATABASE }}
+        ATHENA_WORKGROUP: ${{ secrets.DEV_ATHENA_WORKGROUP }}
+        TARGET: dev
+      run: |
+        # Generate profiles.yml from template
+        envsubst < profiles/profiles.yml.j2 > profiles/profiles.yml
+    
+    - name: dbt deps
+      working-directory: ./transform/${{ matrix.dbt_project }}
+      run: dbt deps --profiles-dir ../profiles
+    
+    - name: dbt compile
+      working-directory: ./transform/${{ matrix.dbt_project }}
+      run: dbt compile --profiles-dir ../profiles --target dev
+    
+    - name: dbt test (models only, no data)
+      working-directory: ./transform/${{ matrix.dbt_project }}
+      run: |
+        # Run parsing and compilation tests only
+        # Skip data tests since we don't have full dev data
+        dbt parse --profiles-dir ../profiles --target dev

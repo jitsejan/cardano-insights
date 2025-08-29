@@ -1,0 +1,29 @@
+# dbt profiles template for Athena/Glue runtime
+# Environment variables will be substituted at runtime
+
+tech_intel_athena:
+  target: "{{ TARGET | default('dev') }}"
+  outputs:
+    dev:
+      type: athena
+      s3_staging_dir: "s3://{{ S3_BUCKET }}/athena-results/dev/"
+      s3_data_dir: "s3://{{ S3_BUCKET }}/silver/"
+      region_name: "{{ AWS_REGION }}"
+      database: "{{ GLUE_DATABASE }}"
+      schema: "dev"
+      work_group: "{{ ATHENA_WORKGROUP }}"
+      num_retries: 3
+      poll_interval: 5
+      threads: 4
+    
+    prod:
+      type: athena
+      s3_staging_dir: "s3://{{ S3_BUCKET }}/athena-results/prod/"
+      s3_data_dir: "s3://{{ S3_BUCKET }}/silver/"
+      region_name: "{{ AWS_REGION }}"
+      database: "{{ GLUE_DATABASE }}"
+      schema: "prod"
+      work_group: "{{ ATHENA_WORKGROUP }}"
+      num_retries: 5
+      poll_interval: 10
+      threads: 8

@@ -1,0 +1,13 @@
+# DLT and core dependencies
+dlt[filesystem]==1.4.1
+s3fs==2024.12.0
+pyarrow==18.1.0
+pandas==2.2.3
+
+# API and utilities
+requests==2.32.3
+boto3==1.35.84
+botocore==1.35.84
+
+# Logging and monitoring
+structlog==24.4.0

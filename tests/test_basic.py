@@ -2,7 +2,7 @@
 Basic tests to verify test infrastructure and imports.
 """
 import pytest
-from src.cardano_insights.connectors import lido
+from load.lido import pipeline as lido
 
 
 def test_import_lido_connector():

@@ -1,0 +1,45 @@
+version: 2
+
+sources:
+  - name: github_raw
+    description: Raw GitHub data from API extraction  
+    schema: github_raw
+    tables:
+      - name: pull_requests
+        description: GitHub pull requests from API
+        columns:
+          - name: id
+            description: GitHub pull request ID
+            tests:
+              - not_null
+              - unique
+          - name: repository_full_name
+            description: Repository name in owner/repo format
+            tests:
+              - not_null
+              
+      - name: releases
+        description: GitHub releases from API
+        columns:
+          - name: id
+            description: GitHub release ID
+            tests:
+              - not_null
+              - unique
+          - name: repository_full_name
+            description: Repository name in owner/repo format
+            tests:
+              - not_null
+              
+      - name: repositories
+        description: GitHub repository metadata from API
+        columns:
+          - name: id
+            description: GitHub repository ID
+            tests:
+              - not_null
+              - unique
+          - name: full_name
+            description: Repository name in owner/repo format
+            tests:
+              - not_null

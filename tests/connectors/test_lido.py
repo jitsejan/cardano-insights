@@ -8,7 +8,7 @@ import duckdb
 import os
 from pathlib import Path
 
-from src.cardano_insights.connectors.lido import funds, proposals
+from load.lido.pipeline import funds, proposals
 
 
 class TestLidoConnector:

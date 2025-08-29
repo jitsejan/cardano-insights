@@ -181,6 +181,48 @@ analytics-full: setup-unified dbt-run-all
 	@echo "  🥈 Silver: Cleaned and transformed data"
 	@echo "  🥇 Gold: Business-ready analytics and insights"
 
+# Cloud-native development commands
+run-local-lido:
+	@echo "🚀 Running Lido pipeline locally..."
+	uv run python scripts/run_local_lido.py
+
+run-local-lido-sample:
+	@echo "🚀 Running Lido pipeline locally (sample data)..."
+	uv run python scripts/run_local_lido.py --sample
+
+# Container development
+docker-build-lido:
+	@echo "🐳 Building Lido container..."
+	docker build -f load/lido/Dockerfile -t cardano-insights-lido .
+
+docker-build-dbt:
+	@echo "🐳 Building dbt container..."
+	docker build -f transform/Dockerfile -t cardano-insights-dbt .
+
+docker-build-all: docker-build-lido docker-build-dbt
+	@echo "✅ All containers built successfully"
+
+# Terraform operations
+tf-init:
+	@echo "🏗️  Initializing Terraform..."
+	cd infra && terraform init
+
+tf-plan-dev:
+	@echo "📋 Planning dev infrastructure..."
+	cd infra && terraform plan -var-file="env/dev.tfvars"
+
+tf-plan-prod:
+	@echo "📋 Planning prod infrastructure..."
+	cd infra && terraform plan -var-file="env/prod.tfvars"
+
 # CI/CD style checks  
 ci: clean install test-all
 	@echo "🎯 CI pipeline completed successfully"
+
+# Architecture documentation
+docs-architecture:
+	@echo "📖 Cloud architecture documentation:"
+	@echo "  📄 CLOUD_ARCHITECTURE.md - Migration overview and structure"
+	@echo "  📄 infra/README.md - Infrastructure deployment guide"
+	@echo "  📄 load/lido/pipeline.py - Container-ready Lido ingestion"
+	@echo "  📄 transform/ - dbt models for Athena/Glue"

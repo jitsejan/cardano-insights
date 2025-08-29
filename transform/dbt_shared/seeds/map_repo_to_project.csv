@@ -1,0 +1,5 @@
+repository_full_name,project_name,project_type,organization
+cardano-foundation/cardano-wallet,Cardano Wallet,wallet,Cardano Foundation
+input-output-hk/cardano-node,Cardano Node,infrastructure,Input Output
+input-output-hk/plutus,Plutus,smart_contracts,Input Output
+Emurgo/cardano-serialization-lib,Cardano Serialization Lib,library,Emurgo
