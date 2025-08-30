@@ -1,3 +1,0 @@
-packages:
-  - local: ../dbt_shared
-  - local: ../dbt_github
