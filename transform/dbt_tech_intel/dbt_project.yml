@@ -1,0 +1,46 @@
+name: 'dbt_tech_intel'
+version: '1.0.0'
+profile: 'tech_intel'
+config-version: 2
+
+model-paths: ['models']
+seed-paths: ['seeds']
+macro-paths: ['macros']
+target-path: 'target'
+clean-targets: ['target']
+
+models:
+  dbt_tech_intel:
+    catalyst:
+      bronze:
+        +materialized: table
+        +schema: 'catalyst_bronze'
+      silver:
+        +materialized: table
+        +schema: 'catalyst_silver'
+      gold:
+        +materialized: table
+        +schema: 'catalyst_gold'
+    github:
+      bronze:
+        +materialized: table
+        +schema: 'github_bronze'
+      silver:
+        +materialized: table
+        +schema: 'github_silver'
+      gold:
+        +materialized: table
+        +schema: 'github_gold'
+    lido:
+      bronze:
+        +materialized: table
+        +schema: 'lido_bronze'
+      silver:
+        +materialized: table
+        +schema: 'lido_silver'
+      gold:
+        +materialized: table
+        +schema: 'lido_gold'
+    shared:
+      +materialized: table
+      +schema: 'shared'
